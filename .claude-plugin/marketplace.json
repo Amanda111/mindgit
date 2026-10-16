@@ -1,0 +1,14 @@
+{
+  "name": "mindgit",
+  "owner": {
+    "name": "Amanda"
+  },
+  "description": "Mindgit：用 Markdown 和 git 管理产品思维导图的 Claude Code 插件",
+  "plugins": [
+    {
+      "name": "mindgit",
+      "source": "./",
+      "description": "用 Markdown 写产品思维导图，用 git 管版本，渲染成可回放历史的可视化页面"
+    }
+  ]
+}

@@ -4,43 +4,45 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: one-screen workbench. Map canvas on graph paper, a side ledger for version + progress, a commit rail along the bottom. */
+/* Layout: one-screen workbench. Editable map on graph paper, a side ledger (overview / Markdown source), a commit rail along the bottom. */
 :root {
   --bg: #eef1ee;
-  --paper: #f7f9f6;
+  --paper: #f6f8f5;
   --surface: #ffffff;
-  --ink: #18211d;
-  --muted: #5d6a64;
-  --faint: #8c9893;
-  --line: #d6ddd8;
-  --grid: #d3dad5;
+  --ink: #17201c;
+  --muted: #5b6862;
+  --faint: #8a9690;
+  --line: #d5dcd7;
+  --grid: #d0d8d2;
   --change: #2f5fe0;
-  --change-soft: rgba(47, 95, 224, .14);
-  --done: #1f8a52;
+  --change-soft: rgba(47, 95, 224, .13);
+  --done: #1d8a50;
   --doing: #c27408;
-  --todo: #7d8984;
+  --todo: #7b8782;
   --paused: #a24f4f;
-  --b0: #0f7f73; --b1: #4357c9; --b2: #b86e0b; --b3: #b23b62; --b4: #5f7f1d; --b5: #7c4dbb;
-  --root-bg: #18211d; --root-fg: #f7f9f6;
+  --b0: #0f8273; --b1: #4659cc; --b2: #b86d0a; --b3: #b23b62; --b4: #5c7d1a; --b5: #7a4cbb;
+  --on-branch: #ffffff;
+  --root-bg: #17201c; --root-fg: #f6f8f5;
+  --shadow: rgba(23, 32, 28, .14);
   --font-sans: "IBM Plex Sans", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #101513; --paper: #141a17; --surface: #1a211e; --ink: #e3e9e5; --muted: #9aa8a1; --faint: #6d7b74;
-    --line: #2a3430; --grid: #232c28; --change: #7d9cff; --change-soft: rgba(125, 156, 255, .18);
-    --done: #4cc184; --doing: #f0a43a; --todo: #8d9a94; --paused: #d27f7f;
-    --b0: #3cc2b0; --b1: #8796ff; --b2: #eba64a; --b3: #f07aa0; --b4: #a6c95a; --b5: #b993f2;
-    --root-bg: #e3e9e5; --root-fg: #101513;
+    --bg: #0f1412; --paper: #131916; --surface: #1a211e; --ink: #e2e8e4; --muted: #9aa7a0; --faint: #6c7a73;
+    --line: #29332f; --grid: #222b27; --change: #7d9cff; --change-soft: rgba(125, 156, 255, .17);
+    --done: #4cc184; --doing: #f0a43a; --todo: #8c9993; --paused: #d27f7f;
+    --b0: #35b8a6; --b1: #7f8ff7; --b2: #e3a04a; --b3: #ea7399; --b4: #9fc254; --b5: #b18ced;
+    --on-branch: #0f1412; --root-bg: #e2e8e4; --root-fg: #0f1412; --shadow: rgba(0, 0, 0, .45);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #101513; --paper: #141a17; --surface: #1a211e; --ink: #e3e9e5; --muted: #9aa8a1; --faint: #6d7b74;
-  --line: #2a3430; --grid: #232c28; --change: #7d9cff; --change-soft: rgba(125, 156, 255, .18);
-  --done: #4cc184; --doing: #f0a43a; --todo: #8d9a94; --paused: #d27f7f;
-  --b0: #3cc2b0; --b1: #8796ff; --b2: #eba64a; --b3: #f07aa0; --b4: #a6c95a; --b5: #b993f2;
-  --root-bg: #e3e9e5; --root-fg: #101513;
+  --bg: #0f1412; --paper: #131916; --surface: #1a211e; --ink: #e2e8e4; --muted: #9aa7a0; --faint: #6c7a73;
+  --line: #29332f; --grid: #222b27; --change: #7d9cff; --change-soft: rgba(125, 156, 255, .17);
+  --done: #4cc184; --doing: #f0a43a; --todo: #8c9993; --paused: #d27f7f;
+  --b0: #35b8a6; --b1: #7f8ff7; --b2: #e3a04a; --b3: #ea7399; --b4: #9fc254; --b5: #b18ced;
+  --on-branch: #0f1412; --root-bg: #e2e8e4; --root-fg: #0f1412; --shadow: rgba(0, 0, 0, .45);
   color-scheme: dark;
 }
 html, body { height: 100%; }
@@ -49,28 +51,36 @@ body {
   display: grid; grid-template-rows: auto 1fr auto; overflow: hidden;
 }
 button { font: inherit; color: inherit; cursor: pointer; }
-button:focus-visible, input:focus-visible { outline: 2px solid var(--change); outline-offset: 2px; }
+button:disabled { opacity: .4; cursor: default; }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--change); outline-offset: 2px; }
 
 /* Header */
 .top {
-  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
   padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   border-bottom: 1px solid var(--line); background: var(--paper);
 }
-.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.mark { width: 22px; height: 22px; flex: none; }
 .brand b { font-weight: 700; letter-spacing: -.01em; font-size: 15px; }
 .brand code { font-family: var(--font-mono); font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mode { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+.mode .dot { width: 7px; height: 7px; }
+.mode.live .dot { background: var(--done); }
+.mode.demo .dot { background: var(--doing); }
+.mode.off .dot { background: var(--paused); }
 .top .spacer { flex: 1; }
 .tools { display: flex; gap: 6px; flex-wrap: wrap; }
 .btn {
-  border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 5px 10px; font-size: 13px;
-  display: inline-flex; align-items: center; gap: 6px;
+  border: 1px solid var(--line); background: var(--surface); border-radius: 7px; padding: 5px 10px; font-size: 13px;
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
 }
-.btn:hover { border-color: var(--faint); }
+.btn:hover:not(:disabled) { border-color: var(--faint); }
 .btn[aria-pressed="true"] { border-color: var(--change); color: var(--change); background: var(--change-soft); }
+kbd { font-family: var(--font-mono); font-size: 10.5px; color: var(--faint); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
 
 /* Main */
-.main { display: grid; grid-template-columns: 1fr 300px; min-height: 0; }
+.main { display: grid; grid-template-columns: 1fr 320px; min-height: 0; }
 .map {
   position: relative; min-width: 0; min-height: 0; overflow: hidden; touch-action: none; cursor: grab;
   background-color: var(--paper);
@@ -78,33 +88,65 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
   background-size: 22px 22px;
 }
 .map.dragging { cursor: grabbing; }
+.map.dropping { box-shadow: inset 0 0 0 3px var(--change); }
 .map svg { width: 100%; height: 100%; display: block; }
-.zoom { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+.zoom { position: absolute; right: max(12px, env(safe-area-inset-right, 0px)); bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
 .zoom .btn { width: 32px; height: 32px; justify-content: center; padding: 0; font-family: var(--font-mono); }
+.banner {
+  position: absolute; left: 50%; top: 12px; transform: translateX(-50%); z-index: 3;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 5px 6px 5px 14px;
+  display: flex; align-items: center; gap: 10px; font-size: 13px; box-shadow: 0 6px 18px var(--shadow); white-space: nowrap;
+}
+.hint { position: absolute; left: 12px; bottom: 12px; font-size: 12px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; max-width: calc(100% - 90px); pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
 
 /* SVG map */
-.link { fill: none; stroke-width: 1.6; stroke-linecap: round; }
+.link { fill: none; stroke-linecap: round; }
+.node { cursor: pointer; }
 .node text { fill: var(--ink); dominant-baseline: central; }
-.node .t0 { fill: var(--root-fg); font-weight: 600; font-size: 18px; }
-.node .t1 { font-weight: 600; font-size: 15px; }
+.node .t0 { fill: var(--root-fg); font-weight: 700; font-size: 20px; }
+.node .t1 { fill: var(--on-branch); font-weight: 600; font-size: 15px; }
 .node .t2 { font-weight: 500; font-size: 14px; }
 .node .t3 { font-size: 13px; }
 .node .pr { font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; }
 .node .st { font-size: 11px; font-weight: 500; }
-.node.has-kids { cursor: pointer; }
-.node.dim { opacity: .22; }
+.node .lift { filter: drop-shadow(0 4px 10px var(--shadow)); }
+.node.dim { opacity: .2; }
 .node .halo { fill: var(--change-soft); stroke: var(--change); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.node .sel { fill: none; stroke: var(--change); stroke-width: 2; }
+.node.drop .sel-drop { fill: var(--change-soft); stroke: var(--change); stroke-width: 2; stroke-dasharray: 5 3; }
 .node .newtag { fill: var(--change); }
 .node .newtag-t { fill: var(--surface); font-family: var(--font-mono); font-size: 9.5px; font-weight: 500; }
 .node .ring { fill: none; stroke: var(--change); stroke-width: 1.6; }
-.toggle { fill: var(--surface); stroke-width: 1.4; }
-.toggle-t { font-family: var(--font-mono); font-size: 9.5px; text-anchor: middle; }
+.node .frame { fill: var(--surface); stroke: var(--line); }
+.node .ph { fill: var(--faint); font-size: 11px; }
+.toggle { fill: var(--surface); stroke-width: 1.4; cursor: pointer; }
+.toggle-t { font-family: var(--font-mono); font-size: 9.5px; text-anchor: middle; pointer-events: none; }
+
+/* Inline editor + node toolbar */
+.edit-in {
+  position: absolute; z-index: 4; font-family: var(--font-sans); color: var(--ink); background: var(--surface);
+  border: 2px solid var(--change); border-radius: 6px; padding: 1px 6px; outline: none; min-width: 80px; box-sizing: border-box;
+  box-shadow: 0 6px 18px var(--shadow);
+}
+.bar-tools {
+  position: absolute; z-index: 3; display: flex; align-items: center; gap: 2px; padding: 4px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 8px 22px var(--shadow);
+  white-space: nowrap; max-width: calc(100% - 16px); overflow-x: auto;
+}
+.bar-tools button { border: 0; background: none; border-radius: 6px; padding: 4px 7px; font-size: 12.5px; display: inline-flex; align-items: center; gap: 5px; flex: none; }
+.bar-tools button:hover { background: var(--change-soft); }
+.bar-tools button[aria-pressed="true"] { background: var(--change-soft); color: var(--change); }
+.bar-tools .sep { width: 1px; height: 18px; background: var(--line); margin: 0 3px; flex: none; }
+.bar-tools .dot { width: 9px; height: 9px; }
+.bar-tools .danger { color: var(--paused); }
 
 /* Side ledger */
-.side {
-  border-left: 1px solid var(--line); background: var(--surface); overflow-y: auto; min-height: 0;
-  padding: 16px 18px; display: flex; flex-direction: column; gap: 22px;
-}
+.side { border-left: 1px solid var(--line); background: var(--surface); min-height: 0; display: grid; grid-template-rows: auto 1fr; }
+.tabs { display: flex; gap: 4px; padding: 10px 14px 0; border-bottom: 1px solid var(--line); }
+.tab { border: 0; background: none; padding: 7px 10px 9px; font-size: 13px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+.pane { overflow-y: auto; min-height: 0; padding: 16px 18px; display: flex; flex-direction: column; gap: 22px; }
+.pane.src { padding: 0; gap: 0; }
 .side h2 { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); font-weight: 600; margin: 0 0 10px; }
 .ver-msg { font-size: 15px; font-weight: 600; line-height: 1.4; text-wrap: balance; margin: 0 0 6px; }
 .ver-meta { font-family: var(--font-mono); font-size: 12px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
@@ -116,13 +158,12 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
 .chg-list li { display: grid; grid-template-columns: 16px 1fr; gap: 6px; line-height: 1.4; }
 .chg-list .k { font-family: var(--font-mono); text-align: center; }
 .chg-list .from { color: var(--faint); }
-.none { color: var(--faint); font-size: 13px; margin: 0; }
-
+.none { color: var(--faint); font-size: 13px; margin: 0; line-height: 1.5; }
 .overall { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
 .overall .pct { font-size: 30px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .overall .of { color: var(--muted); font-size: 13px; }
-.bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--line); }
-.bar i { display: block; height: 100%; transition: width .4s ease; }
+.pbar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--line); }
+.pbar i { display: block; height: 100%; transition: width .4s ease; }
 .legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
 .chip {
   border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 3px 9px 3px 7px; font-size: 12px;
@@ -133,7 +174,14 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
 .mods { display: flex; flex-direction: column; gap: 12px; }
 .mod-h { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 5px; }
 .mod-h span:last-child { font-family: var(--font-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.mod .bar { height: 6px; }
+.mod .pbar { height: 6px; }
+.src-head { padding: 10px 14px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); line-height: 1.5; }
+#source {
+  display: block; width: 100%; height: 100%; min-height: 320px; resize: none; border: 0; background: var(--paper); color: var(--ink);
+  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.65; padding: 12px 14px; tab-size: 2; box-sizing: border-box;
+}
+#source:focus-visible { outline: none; box-shadow: inset 0 0 0 2px var(--change); }
+#source[readonly] { color: var(--muted); }
 
 /* Commit rail */
 .rail {
@@ -147,14 +195,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
 .commits { display: flex; list-style: none; margin: 0; padding: 0 0 2px; position: relative; min-width: max-content; }
 .commits::before { content: ""; position: absolute; left: 10px; right: 10px; top: 9px; height: 2px; background: var(--line); }
 .commit { position: relative; flex: none; width: 168px; }
-.commit button {
-  border: 0; background: none; padding: 0 8px 0 0; text-align: left; width: 100%;
-  display: grid; grid-template-rows: 20px auto auto; gap: 3px;
-}
-.commit .knot {
-  width: 12px; height: 12px; border-radius: 50%; margin: 4px 0 0 4px;
-  background: var(--surface); border: 2px solid var(--faint); position: relative; z-index: 1;
-}
+.commit button { border: 0; background: none; padding: 0 8px 0 0; text-align: left; width: 100%; display: grid; grid-template-rows: 20px auto auto; gap: 3px; }
+.commit .knot { width: 12px; height: 12px; border-radius: 50%; margin: 4px 0 0 4px; background: var(--surface); border: 2px solid var(--faint); position: relative; z-index: 1; box-sizing: border-box; }
 .commit.past .knot { border-color: var(--ink); background: var(--ink); }
 .commit.on .knot { border-color: var(--change); background: var(--change); box-shadow: 0 0 0 4px var(--change-soft); }
 .commit.wip .knot { border-style: dashed; }
@@ -163,21 +205,34 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
 .commit.on .msg { font-weight: 600; }
 .commit.on .meta .h { color: var(--change); }
 
+.toast {
+  position: fixed; left: 50%; bottom: calc(90px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 9;
+  background: var(--ink); color: var(--paper); padding: 8px 14px; border-radius: 8px; font-size: 13px; box-shadow: 0 8px 22px var(--shadow);
+}
+
 @media (max-width: 760px) {
   body { overflow: auto; height: auto; display: block; }
   .main { display: block; }
-  .map { height: 62vh; }
-  .side { border-left: 0; border-top: 1px solid var(--line); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .map { height: 64vh; }
+  .side { border-left: 0; border-top: 1px solid var(--line); }
+  .pane { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  #source { min-height: 360px; }
   .rail { grid-template-columns: 1fr; }
   .commit { width: 140px; }
+  .hint { display: none; }
 }
-@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .pbar i { transition: none; } }
 </style>
 
 <header class="top">
-  <div class="brand"><b>Mindgit</b><code id="file"></code></div>
+  <div class="brand">
+    <svg class="mark" viewBox="0 0 22 22" aria-hidden="true"><circle cx="5" cy="11" r="3" fill="var(--ink)"/><path d="M8 11 C12 11 11 5 15 5 M8 11 C12 11 11 17 15 17" fill="none" stroke="var(--b0)" stroke-width="2" stroke-linecap="round"/><circle cx="17" cy="5" r="2.4" fill="var(--b1)"/><circle cx="17" cy="17" r="2.4" fill="var(--b2)"/></svg>
+    <b>Mindgit</b><code id="file"></code>
+  </div>
+  <span class="mode" id="mode"><span class="dot"></span><span id="mode-t"></span></span>
   <div class="spacer"></div>
   <div class="tools">
+    <button class="btn" id="btn-undo" title="撤销 (Ctrl/⌘+Z)">撤销</button>
     <button class="btn" id="btn-diff" aria-pressed="true" title="高亮这个版本相对上一版的变化">显示变更</button>
     <button class="btn" id="btn-expand">全部展开</button>
     <button class="btn" id="btn-fold">收起到模块</button>
@@ -189,32 +244,46 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
     <svg id="svg" aria-label="思维导图">
       <g id="vp"><g id="links"></g><g id="nodes"></g></g>
     </svg>
+    <div class="banner" id="banner" hidden><span id="banner-t"></span><button class="btn" id="to-latest">回到最新</button></div>
+    <div class="bar-tools" id="toolbar" hidden></div>
+    <div class="hint" id="hint"><span>点选节点编辑</span><span><kbd>Tab</kbd> 子节点</span><span><kbd>Enter</kbd> 同级</span><span><kbd>F2</kbd>/双击 改名</span><span><kbd>1</kbd>–<kbd>4</kbd> 状态</span><span>拖入图片</span></div>
     <div class="zoom">
       <button class="btn" id="z-in" aria-label="放大">+</button>
       <button class="btn" id="z-out" aria-label="缩小">−</button>
       <button class="btn" id="z-fit" aria-label="适应窗口" title="适应窗口">⤢</button>
     </div>
+    <input type="file" id="pick" accept="image/*" hidden>
   </div>
   <aside class="side">
-    <section>
-      <h2>当前版本</h2>
-      <p class="ver-msg" id="ver-msg"></p>
-      <div class="ver-meta" id="ver-meta"></div>
-    </section>
-    <section>
-      <h2>相对上一版</h2>
-      <div id="changes"></div>
-    </section>
-    <section>
-      <h2>进度</h2>
-      <div class="overall"><span class="pct" id="pct"></span><span class="of" id="of"></span></div>
-      <div class="bar" id="bar"></div>
-      <div class="legend" id="legend"></div>
-    </section>
-    <section>
-      <h2>模块</h2>
-      <div class="mods" id="mods"></div>
-    </section>
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" id="tab-ov" aria-selected="true">概览</button>
+      <button class="tab" role="tab" id="tab-src" aria-selected="false">Markdown</button>
+    </div>
+    <div class="pane" id="pane-ov">
+      <section>
+        <h2>当前版本</h2>
+        <p class="ver-msg" id="ver-msg"></p>
+        <div class="ver-meta" id="ver-meta"></div>
+      </section>
+      <section>
+        <h2>相对上一版</h2>
+        <div id="changes"></div>
+      </section>
+      <section>
+        <h2>进度</h2>
+        <div class="overall"><span class="pct" id="pct"></span><span class="of" id="of"></span></div>
+        <div class="pbar" id="pbar"></div>
+        <div class="legend" id="legend"></div>
+      </section>
+      <section>
+        <h2>模块</h2>
+        <div class="mods" id="mods"></div>
+      </section>
+    </div>
+    <div class="pane src" id="pane-src" hidden>
+      <div class="src-head" id="src-note">在这里改 Markdown，导图会同步更新</div>
+      <textarea id="source" spellcheck="false" aria-label="Markdown 源文件"></textarea>
+    </div>
   </aside>
 </div>
 
@@ -226,6 +295,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
   </div>
   <div class="track" id="track"><ol class="commits" id="commits"></ol></div>
 </footer>
+<div class="toast" id="toast" hidden></div>
 
 <script>/*__PARSER__*/</script>
 <script id="mg-data" type="application/json">__DATA__</script>
@@ -233,70 +303,109 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
 (function () {
   const P = window.MindgitParse;
   const DATA = JSON.parse(document.getElementById('mg-data').textContent);
-  const commits = DATA.commits.map(c => ({ ...c, tree: P.parse(c.content) }));
+  const LIVE = DATA.mode === 'live';
+  const ASSETS = Object.assign({}, DATA.assets || {});
   const STATUS_ORDER = ['done', 'doing', 'todo', 'paused'];
-  const L = P.STATUS_LABEL;
+  const L = P.STATUS_LABEL, SEP = P.SEP;
   const NS = 'http://www.w3.org/2000/svg';
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const $ = id => document.getElementById(id);
 
-  let cur = commits.length - 1;
-  let showDiff = true;
-  let filter = null;
-  let collapsed = new Set();
+  // ---------- state ----------
+  let base = DATA.commits.filter(c => !c.wip);
+  let md = DATA.commits[DATA.commits.length - 1].content;
+  let commits = [];
+  let cur = 0;
+  let showDiff = true, filter = null, collapsed = new Set();
   let view = { x: 40, y: 0, k: 1 };
-  let pos = new Map();      // id -> {x, y} currently drawn
+  let pos = new Map();
   let playing = null;
+  let sel = null;
+  let undo = [], redo = [];
+  let serverHash = DATA.hash || null, saveTimer = null, saving = false;
+  let lastNodes = [];
+
+  function rebuildCommits() {
+    base.forEach(c => { if (!c._tree) c._tree = P.parse(c.content); });
+    commits = base.slice();
+    const last = base[base.length - 1];
+    if (!last || last.content !== md) {
+      commits.push({ sha: '', short: 'WIP', date: new Date().toISOString(), author: '', message: '未提交的修改', content: md, wip: true, _tree: P.parse(md) });
+    }
+  }
+  const latest = () => cur === commits.length - 1;
+  const tree = () => commits[cur]._tree;
 
   $('file').textContent = DATA.file;
+  function setMode(kind, text) { $('mode').className = 'mode ' + kind; $('mode-t').textContent = text; }
+  setMode(LIVE ? 'live' : 'demo', LIVE ? '已连接本地文件' : '演示：改动只保存在本页');
 
   // ---------- measuring ----------
   const ctx = document.createElement('canvas').getContext('2d');
-  const FONTS = [
-    '600 18px ' + getCss('--font-sans'), '600 15px ' + getCss('--font-sans'),
-    '500 14px ' + getCss('--font-sans'), '400 13px ' + getCss('--font-sans'),
-  ];
-  function getCss(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
-  function tw(text, depth) { ctx.font = FONTS[Math.min(depth, 3)]; return ctx.measureText(text || ' ').width; }
-  function color(v) { return getCss(v); }
+  const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+  const FONTS = ['700 20px ', '600 15px ', '500 14px ', '400 13px '].map(f => f + css('--font-sans'));
+  function tw(text, d) { ctx.font = FONTS[Math.min(d, 3)]; return ctx.measureText(text || ' ').width; }
+  const chipW = s => Math.round(28 + tw(L[s], 3) * 11 / 13);
+
+  // ---------- images ----------
+  const imgSize = new Map();
+  function resolveSrc(src) {
+    if (!src) return null;
+    if (/^(data:|blob:)/.test(src)) return src;
+    if (ASSETS[src]) return ASSETS[src];
+    if (/^https?:/.test(src)) return src;
+    return LIVE ? '/files/' + src.split('/').map(encodeURIComponent).join('/') : null;
+  }
+  function sizeOf(src) {
+    const url = resolveSrc(src);
+    if (!url) return { w: 150, h: 84, missing: true };
+    if (imgSize.has(url)) return imgSize.get(url);
+    imgSize.set(url, { w: 160, h: 100, loading: true });
+    const im = new Image();
+    im.onload = () => {
+      const nw = im.naturalWidth || 160, nh = im.naturalHeight || 100;
+      const r = Math.min(180 / nw, 120 / nh, 1);
+      imgSize.set(url, { w: Math.round(nw * r), h: Math.round(nh * r) }); render(false);
+    };
+    im.onerror = () => { imgSize.set(url, { w: 150, h: 84, missing: true }); render(false); };
+    im.src = url;
+    return imgSize.get(url);
+  }
 
   // ---------- layout ----------
-  const ROW = [44, 34, 28, 24];
-  const PAD = [18, 12, 0, 0];
+  const ROW = [52, 38, 30, 24];
+  const PAD = [22, 14, 10, 0];
   function geom(n) {
     const d = Math.min(n.depth, 3);
-    const w0 = tw(n.text, d);
-    let w = w0 + PAD[d] * 2;
+    const t = tw(n.text || '未命名', d);
     const pr = n.priority ? 26 : 0;
-    const st = n.status ? 18 + tw(L[n.status], 3) * 11 / 13 + 10 : 0;
-    w += (pr || st) ? 8 + pr + (pr && st ? 4 : 0) + st : 0;
-    return { tw: w0, w, h: ROW[d], pr, st };
+    const st = n.status ? chipW(n.status) : 0;
+    const chips = (pr || st) ? 8 + pr + (pr && st ? 4 : 0) + st - 6 : 0;
+    let w = t + PAD[d] * 2 + chips;
+    const img = n.image ? sizeOf(n.image.src) : null;
+    if (img) w = Math.max(w, img.w + PAD[d] * 2 + (d >= 3 ? 0 : 0));
+    return { tw: t, w, row: ROW[d], h: ROW[d] + (img ? img.h + (d >= 3 ? 8 : 10) : 0), img };
   }
-  function layout(tree) {
+  function layout(t) {
     const out = [];
-    const GAPX = 44;
-    function size(n) {
+    const GAPX = 46;
+    (function size(n) {
       n._g = geom(n);
       n._kids = collapsed.has(n.id) ? [] : n.children;
-      const gap = n.depth === 0 ? 18 : n.depth === 1 ? 8 : 4;
+      n._gap = n.depth === 0 ? 20 : n.depth === 1 ? 10 : 5;
       let s = 0;
-      n._kids.forEach((k, i) => { s += size(k) + (i ? gap : 0); });
-      n._gap = gap;
+      n._kids.forEach((k, i) => { s += size(k) + (i ? n._gap : 0); });
       n._sh = Math.max(n._g.h, s);
       return n._sh;
-    }
-    function place(n, x, top, branch) {
-      n._x = x; n._y = top + n._sh / 2; n._b = branch;
+    })(t);
+    (function place(n, x, top, branch) {
+      n._x = x; n._b = branch;
+      n._y = top + n._sh / 2 - (n._g.h - n._g.row) / 2; // y of the text row centre
       out.push(n);
       let total = 0; n._kids.forEach((k, i) => total += k._sh + (i ? n._gap : 0));
       let cy = top + (n._sh - total) / 2;
-      n._kids.forEach((k, i) => {
-        place(k, x + n._g.w + GAPX, cy, n.depth === 0 ? i % 6 : branch);
-        cy += k._sh + n._gap;
-      });
-    }
-    size(tree);
-    place(tree, 0, -tree._sh / 2, 0);
+      n._kids.forEach((k, i) => { place(k, x + n._g.w + GAPX, cy, n.depth === 0 ? i % 6 : branch); cy += k._sh + n._gap; });
+    })(t, 0, -t._sh / 2, 0);
     return out;
   }
 
@@ -307,42 +416,61 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
     if (parent) parent.appendChild(e);
     return e;
   }
-  const anchorY = n => n.depth >= 2 ? n._g.h / 2 - 1 : 0;
+  const anchorY = n => n.depth >= 3 ? n._g.row / 2 - 1 : 0;
+  let clipSeq = 0;
 
   function drawNode(n, d) {
-    const g = el('g', { class: 'node' + (n.children.length ? ' has-kids' : '') });
+    const g = el('g', { class: 'node', 'data-id': n.id });
     const b = 'var(--b' + n._b + ')';
-    const h = n._g.h, w = n._g.w, depth = Math.min(n.depth, 3);
+    const { w, row, h } = n._g, depth = Math.min(n.depth, 3);
+    const top = -row / 2;
     const added = showDiff && d.added.has(n.id);
-    if (added) el('rect', { class: 'halo', x: -4, y: -h / 2, width: w + 8, height: h, rx: 6 }, g);
-    if (depth === 0) el('rect', { x: 0, y: -h / 2, width: w, height: h, rx: h / 2, fill: 'var(--root-bg)' }, g);
-    else if (depth === 1) el('rect', { x: 0, y: -h / 2, width: w, height: h, rx: 7, fill: 'var(--surface)', stroke: b, 'stroke-width': 1.5 }, g);
-    else el('line', { x1: 0, x2: w, y1: h / 2 - 1, y2: h / 2 - 1, stroke: b, 'stroke-width': depth === 2 ? 2 : 1.4, 'stroke-linecap': 'round' }, g);
-    const t = el('text', { class: 't' + depth, x: PAD[depth], y: depth >= 2 ? -1 : 0 }, g);
-    t.textContent = n.text;
+    el('rect', { class: 'sel-drop', x: -5, y: top - 5, width: w + 10, height: h + 10, rx: 12, fill: 'none' }, g);
+    if (added) el('rect', { class: 'halo', x: -4, y: top - 2, width: w + 8, height: h + 4, rx: 9 }, g);
+    if (depth === 0) el('rect', { class: 'lift', x: 0, y: top, width: w, height: h, rx: 14, fill: 'var(--root-bg)' }, g);
+    else if (depth === 1) el('rect', { class: 'lift', x: 0, y: top, width: w, height: h, rx: 10, fill: b }, g);
+    else if (depth === 2) el('rect', { x: 0, y: top, width: w, height: h, rx: 8, fill: b, 'fill-opacity': .1, stroke: b, 'stroke-opacity': .35 }, g);
+    else el('line', { x1: 0, x2: w, y1: row / 2 - 1, y2: row / 2 - 1, stroke: b, 'stroke-width': 1.4, 'stroke-linecap': 'round' }, g);
+    if (sel === n.id) el('rect', { class: 'sel', x: -4, y: top - 4, width: w + 8, height: h + 8, rx: depth === 0 ? 17 : 12 }, g);
+
+    const t = el('text', { class: 't' + depth, x: PAD[depth], y: depth >= 3 ? -1 : 0 }, g);
+    t.textContent = n.text || '未命名';
+    if (!n.text) t.style.opacity = .5;
     let x = PAD[depth] + n._g.tw + 8;
+    const onSolid = depth <= 1;
     if (n.priority) {
       const pg = el('g', { transform: `translate(${x},0)` }, g);
-      el('rect', { x: 0, y: -8, width: 24, height: 16, rx: 3, fill: 'none', stroke: n.priority === 'P0' ? 'var(--ink)' : 'var(--faint)' }, pg);
-      const pt = el('text', { class: 'pr', x: 12, y: 0, 'text-anchor': 'middle' }, pg);
-      pt.textContent = n.priority;
+      const pc = onSolid ? (depth === 0 ? 'var(--root-fg)' : 'var(--on-branch)') : (n.priority === 'P0' ? 'var(--ink)' : 'var(--faint)');
+      el('rect', { x: 0, y: -8, width: 24, height: 16, rx: 4, fill: 'none', stroke: pc, 'stroke-opacity': onSolid ? .7 : 1 }, pg);
+      const pt = el('text', { class: 'pr', x: 12, y: 0, 'text-anchor': 'middle' }, pg); pt.style.fill = pc; pt.textContent = n.priority;
       x += 28;
     }
     if (n.status) {
       const sc = 'var(--' + n.status + ')';
       const sg = el('g', { transform: `translate(${x},0)` }, g);
-      const sw = n._g.st - 4;
-      el('rect', { x: 0, y: -9, width: sw, height: 18, rx: 9, fill: sc, 'fill-opacity': .13 }, sg);
+      const cw = chipW(n.status) - 6;
+      el('rect', { x: 0, y: -9, width: cw, height: 18, rx: 9, fill: onSolid ? 'var(--surface)' : sc, 'fill-opacity': onSolid ? .95 : .13 }, sg);
       if (n.status === 'done') el('path', { d: 'M5.5 0.2 l2.4 2.4 l4.4 -4.8', fill: 'none', stroke: sc, 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, sg);
       else if (n.status === 'doing') { el('circle', { cx: 9, cy: 0, r: 4, fill: 'none', stroke: sc, 'stroke-width': 1.6 }, sg); el('path', { d: 'M9 -4 A4 4 0 0 1 9 4 Z', fill: sc }, sg); }
       else el('circle', { cx: 9, cy: 0, r: 3.5, fill: n.status === 'paused' ? sc : 'none', stroke: sc, 'stroke-width': 1.5 }, sg);
-      const st = el('text', { class: 'st', x: 17, y: 0, fill: sc }, sg);
-      st.style.fill = sc;
-      st.textContent = L[n.status];
+      const st = el('text', { class: 'st', x: 17, y: 0 }, sg); st.style.fill = sc; st.textContent = L[n.status];
       const ch = showDiff && d.status.get(n.id);
       if (ch) {
-        el('rect', { class: 'ring', x: -2, y: -10.5, width: sw + 4, height: 21, rx: 10.5 }, sg);
-        const tt = el('title', {}, sg); tt.textContent = (ch.from ? L[ch.from] : '无状态') + ' → ' + (ch.to ? L[ch.to] : '无状态');
+        el('rect', { class: 'ring', x: -2, y: -10.5, width: cw + 4, height: 21, rx: 10.5 }, sg);
+        el('title', {}, sg).textContent = (ch.from ? L[ch.from] : '无状态') + ' → ' + (ch.to ? L[ch.to] : '无状态');
+      }
+    }
+    if (n._g.img) {
+      const im = n._g.img, ix = PAD[depth], iy = row / 2 + (depth >= 3 ? 6 : 0);
+      const url = resolveSrc(n.image.src);
+      if (url && !im.missing) {
+        const id = 'mgclip' + (++clipSeq);
+        const cp = el('clipPath', { id }, g); el('rect', { x: ix, y: iy, width: im.w, height: im.h, rx: 6 }, cp);
+        el('rect', { class: 'frame', x: ix - .5, y: iy - .5, width: im.w + 1, height: im.h + 1, rx: 6.5 }, g);
+        el('image', { href: url, x: ix, y: iy, width: im.w, height: im.h, 'clip-path': `url(#${id})`, preserveAspectRatio: 'xMidYMid slice' }, g);
+      } else {
+        el('rect', { class: 'frame', x: ix, y: iy, width: im.w, height: im.h, rx: 6, 'stroke-dasharray': '4 3' }, g);
+        const pt = el('text', { class: 'ph', x: ix + im.w / 2, y: iy + im.h / 2, 'text-anchor': 'middle' }, g); pt.textContent = '图片：' + n.image.src.split('/').pop();
       }
     }
     if (added) {
@@ -351,40 +479,42 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
       const nt = el('text', { class: 'newtag-t', x: 14, y: 0, 'text-anchor': 'middle' }, ng); nt.textContent = 'NEW';
     }
     if (n.children.length) {
-      const cg = el('g', { transform: `translate(${w + 7},${anchorY(n)})` }, g);
+      const cg = el('g', { transform: `translate(${w + 7},${anchorY(n)})`, class: 'tg' }, g);
       const isC = collapsed.has(n.id);
-      el('circle', { class: 'toggle', r: isC ? 8 : 4, stroke: depth === 0 ? 'var(--ink)' : b }, cg);
+      el('circle', { class: 'toggle', r: isC ? 9 : 4.5, stroke: depth === 0 ? 'var(--ink)' : b }, cg);
       if (isC) { const ct = el('text', { class: 'toggle-t', y: 0, 'dominant-baseline': 'central' }, cg); ct.textContent = countAll(n); ct.style.fill = depth === 0 ? 'var(--ink)' : b; }
-      g.addEventListener('click', e => { e.stopPropagation(); if (moved) return; toggle(n.id); });
+      el('title', {}, cg).textContent = isC ? '展开' : '收起';
     }
     if (filter && !matches(n)) g.classList.add('dim');
-    const title = el('title', {}, g); title.textContent = n.text;
     return g;
   }
   function countAll(n) { let c = 0; (function w(x) { x.children.forEach(k => { c++; w(k); }); })(n); return c; }
-  function matches(n) { if (n.status === filter) return true; return n.children.some(matches); }
+  function matches(n) { return n.status === filter || n.children.some(matches); }
 
   let anim = null;
   function render(fit) {
     const c = commits[cur];
     const prev = commits[cur - 1];
-    const dd = P.diff(prev && prev.tree, c.tree);
+    const dd = P.diff(prev && prev._tree, c._tree);
     const d = { added: new Set(dd.initial ? [] : dd.added.map(n => n.id)), status: new Map(dd.status.map(s => [s.node.id, s])) };
-    const nodes = layout(c.tree);
+    clipSeq = 0;
+    const nodes = layout(c._tree);
+    lastNodes = nodes;
     const byId = new Map(nodes.map(n => [n.id, n]));
+    if (sel != null && !byId.has(sel)) sel = null;
     const nodesG = $('nodes'), linksG = $('links');
     nodesG.textContent = ''; linksG.textContent = '';
     const items = nodes.map(n => {
       const g = drawNode(n, d); nodesG.appendChild(g);
-      const parentId = n.id.includes('\u001f') ? n.id.slice(0, n.id.lastIndexOf('\u001f')) : (n.id ? '' : null);
-      const p = parentId === null ? null : byId.get(parentId);
-      const link = p ? el('path', { class: 'link', stroke: 'var(--b' + n._b + ')' }, linksG) : null;
+      const p = n.depth ? byId.get(P.parentId(n.id)) : null;
+      const sw = [0, 3.2, 2.2, 1.5][Math.min(n.depth, 3)];
+      const link = p ? el('path', { class: 'link', stroke: 'var(--b' + n._b + ')', 'stroke-width': sw }, linksG) : null;
       const from = pos.get(n.id) || (p && pos.get(p.id)) || { x: n._x, y: n._y };
       return { n, g, p, link, from, to: { x: n._x, y: n._y }, fresh: !pos.has(n.id) };
     });
     const map = new Map(items.map(i => [i.n.id, i]));
     if (anim) cancelAnimationFrame(anim);
-    const T = reduced ? 0 : 420, t0 = performance.now();
+    const T = reduced ? 0 : 380, t0 = performance.now();
     function frame(now) {
       const t = T ? Math.min(1, (now - t0) / T) : 1;
       const e = 1 - Math.pow(1 - t, 3);
@@ -396,31 +526,34 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
       items.forEach(i => {
         if (!i.link) return;
         const p = map.get(i.p.id);
-        const x1 = p.x + p.n._g.w + (p.n.children.length ? 11 : 0), y1 = p.y + anchorY(p.n);
+        const x1 = p.x + p.n._g.w + 11.5, y1 = p.y + anchorY(p.n);
         const x2 = i.x, y2 = i.y + anchorY(i.n);
-        const mx = (x1 + x2) / 2;
+        const mx = x1 + (x2 - x1) * .5;
         i.link.setAttribute('d', `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`);
-        i.link.style.opacity = i.fresh ? e : 1;
-        if (filter && !matches(i.n)) i.link.style.opacity = .18;
+        i.link.style.opacity = (filter && !matches(i.n)) ? .18 : i.fresh ? e : 1;
       });
       if (t < 1) anim = requestAnimationFrame(frame);
-      else { anim = null; pos = new Map(items.map(i => [i.n.id, i.to])); }
+      else { anim = null; pos = new Map(items.map(i => [i.n.id, i.to])); placeToolbar(); }
     }
     anim = requestAnimationFrame(frame);
-    if (fit) fitView(nodes);
+    if (fit) fitView(nodes, fit === 'first' ? .72 : 0);
     renderSide(c, dd);
     renderRail();
+    $('banner').hidden = latest();
+    $('banner-t').textContent = '正在查看历史版本 ' + c.short + '，只能看不能改';
+    $('btn-undo').disabled = !undo.length;
+    placeToolbar();
   }
 
   // ---------- view ----------
-  function applyView() { $('vp').setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`); }
-  function fitView(nodes) {
-    nodes = nodes || layout(commits[cur].tree);
+  function applyView() { $('vp').setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`); placeToolbar(); }
+  function fitView(nodes, minK) {
+    nodes = nodes || lastNodes;
     let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
-    nodes.forEach(n => { x0 = Math.min(x0, n._x - 30); x1 = Math.max(x1, n._x + n._g.w + 50); y0 = Math.min(y0, n._y - n._g.h); y1 = Math.max(y1, n._y + n._g.h); });
+    nodes.forEach(n => { x0 = Math.min(x0, n._x - 30); x1 = Math.max(x1, n._x + n._g.w + 50); y0 = Math.min(y0, n._y - n._g.row); y1 = Math.max(y1, n._y + n._g.h); });
     const r = $('map').getBoundingClientRect();
-    const k = Math.min(1.15, Math.max(.3, Math.min((r.width - 60) / (x1 - x0), (r.height - 70) / (y1 - y0))));
-    view = { k, x: (r.width - (x1 - x0) * k) / 2 - x0 * k, y: (r.height - (y1 - y0) * k) / 2 - y0 * k };
+    const k = Math.min(1.15, Math.max(minK || .3, Math.min((r.width - 60) / (x1 - x0), (r.height - 90) / (y1 - y0))));
+    view = { k, x: Math.max(24 - x0 * k, (r.width - (x1 - x0) * k) / 2 - x0 * k), y: (r.height - (y1 - y0) * k) / 2 - y0 * k };
     applyView();
   }
   function zoomAt(f, cx, cy) {
@@ -430,14 +563,16 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
   }
   const mapEl = $('map');
   mapEl.addEventListener('wheel', e => {
+    if (e.target.closest('.bar-tools')) return;
     e.preventDefault();
     const r = mapEl.getBoundingClientRect();
-    zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0015)), e.clientX - r.left, e.clientY - r.top);
+    if (e.ctrlKey || e.metaKey || (Math.abs(e.deltaY) >= 50 && !e.deltaX)) zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0015)), e.clientX - r.left, e.clientY - r.top);
+    else { view.x -= e.deltaX; view.y -= e.deltaY; applyView(); }
   }, { passive: false });
   const pointers = new Map();
   let moved = false, last = null, pinch = null;
   mapEl.addEventListener('pointerdown', e => {
-    if (e.target.closest('.zoom')) return;
+    if (e.target.closest('.zoom,.bar-tools,.banner,.edit-in')) return;
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
     moved = false; last = { x: e.clientX, y: e.clientY };
     if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); }
@@ -452,12 +587,11 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
     }
     const dx = e.clientX - last.x, dy = e.clientY - last.y;
     if (Math.abs(dx) + Math.abs(dy) > 3 || moved) {
-      if (!moved) mapEl.setPointerCapture?.(e.pointerId);
       moved = true; mapEl.classList.add('dragging');
       view.x += dx; view.y += dy; last = { x: e.clientX, y: e.clientY }; applyView();
     }
   });
-  const up = e => { pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null; mapEl.classList.remove('dragging'); setTimeout(() => { if (!pointers.size) moved = false; }, 0); };
+  const up = e => { if (!pointers.has(e.pointerId)) return; pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null; mapEl.classList.remove('dragging'); };
   window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
   const center = () => { const r = mapEl.getBoundingClientRect(); return [r.width / 2, r.height / 2]; };
   $('z-in').onclick = () => zoomAt(1.25, ...center());
@@ -465,14 +599,292 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
   $('z-fit').onclick = () => fitView();
   window.addEventListener('resize', () => fitView());
 
+  // Clicks on the map: select, toggle, rename.
+  $('svg').addEventListener('click', e => {
+    if (moved) { moved = false; return; }
+    const g = e.target.closest('.node');
+    if (!g) { if (sel != null) select(null); return; }
+    const id = g.getAttribute('data-id');
+    if (e.target.closest('.tg')) { toggle(id); return; }
+    select(id);
+  });
+  $('svg').addEventListener('dblclick', e => {
+    const g = e.target.closest('.node');
+    if (g && !e.target.closest('.tg')) { sel = g.getAttribute('data-id'); startRename(); }
+  });
+
   function toggle(id) { collapsed.has(id) ? collapsed.delete(id) : collapsed.add(id); render(false); }
   $('btn-expand').onclick = () => { collapsed.clear(); render(true); };
   $('btn-fold').onclick = () => {
     collapsed.clear();
-    (function w(n) { if (n.depth >= 2 && n.children.length) collapsed.add(n.id); n.children.forEach(w); })(commits[cur].tree);
+    (function w(n) { if (n.depth >= 2 && n.children.length) collapsed.add(n.id); n.children.forEach(w); })(tree());
     render(true);
   };
   $('btn-diff').onclick = e => { showDiff = !showDiff; e.currentTarget.setAttribute('aria-pressed', showDiff); render(false); };
+
+  // ---------- editing ----------
+  function nodeById(id) { return id == null ? null : P.findById(P.parse(md), id); }
+  function select(id) { sel = id; render(false); }
+
+  function commit(next, opts) {
+    opts = opts || {};
+    if (opts.select !== undefined) sel = opts.select;
+    if (next === md) { render(false); return; }
+    if (!opts.noUndo) { undo.push(md); if (undo.length > 200) undo.shift(); redo = []; }
+    md = next;
+    rebuildCommits();
+    cur = commits.length - 1;
+    if (!opts.fromSource) src.value = md;
+    render(false);
+    if (LIVE && !opts.fromServer) scheduleSave();
+  }
+  function edit(fn, selectAfter) {
+    if (!latest()) { toast('回到最新版本才能编辑'); return false; }
+    const n = nodeById(sel);
+    if (!n) return false;
+    const r = fn(n);
+    if (r == null) return false;
+    commit(r, { select: selectAfter ? selectAfter(n) : sel });
+    return true;
+  }
+  const childId = (n, text) => {
+    const same = n.children.filter(c => c.text === text).length;
+    return (n.id ? n.id + SEP : '') + text + (same ? '#' + (same + 1) : '');
+  };
+  function setStatus(s) { edit(n => P.updateNode(md, n, { status: n.status === s ? null : s })); }
+  function setPriority(p) { edit(n => P.updateNode(md, n, { priority: n.priority === p ? null : p })); }
+  function addChild() {
+    const n = nodeById(sel); if (!n) return;
+    collapsed.delete(n.id);
+    if (edit(n => P.addChild(md, n, '新节点'), n => childId(n, '新节点'))) startRename();
+  }
+  function addSibling() {
+    const n = nodeById(sel); if (!n) return;
+    if (!n.depth) return addChild();
+    const parent = nodeById(P.parentId(n.id));
+    if (edit(n => P.addSibling(md, n, '新节点'), () => childId(parent, '新节点'))) startRename();
+  }
+  function removeSel() {
+    const n = nodeById(sel); if (!n || !n.depth) return;
+    if (edit(n => P.removeNode(md, n), n => P.parentId(n.id))) toast('已删除，按 Ctrl/⌘+Z 撤销');
+  }
+  function doUndo() { if (!undo.length) return; redo.push(md); commit(undo.pop(), { noUndo: true }); }
+  function doRedo() { if (!redo.length) return; undo.push(md); commit(redo.pop(), { noUndo: true }); }
+  $('btn-undo').onclick = doUndo;
+
+  // Inline rename
+  let editor = null;
+  function startRename() {
+    if (!latest()) return;
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const n = lastNodes.find(x => x.id === sel); if (!n) return;
+      closeEditor(false);
+      const d = Math.min(n.depth, 3);
+      const inp = document.createElement('input');
+      inp.className = 'edit-in'; inp.id = 'edit-in'; inp.value = n.text;
+      const fs = [20, 15, 14, 13][d] * view.k;
+      inp.style.font = FONTS[d].replace(/\d+px/, fs.toFixed(1) + 'px');
+      const hpx = Math.max(26, (d >= 3 ? 26 : n._g.row - 4) * view.k);
+      inp.style.left = (view.x + (n._x + PAD[d] - 8) * view.k) + 'px';
+      inp.style.top = (view.y + (n._y + (d >= 3 ? -2 : 0)) * view.k - hpx / 2) + 'px';
+      inp.style.height = hpx + 'px';
+      inp.style.width = Math.max(150, (n._g.tw + 70) * view.k) + 'px';
+      mapEl.appendChild(inp);
+      inp.focus(); inp.select();
+      editor = { inp, id: n.id };
+      placeToolbar();
+      inp.addEventListener('keydown', e => {
+        e.stopPropagation();
+        if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); closeEditor(true); }
+        if (e.key === 'Escape') { e.preventDefault(); closeEditor(false); }
+        if (e.key === 'Tab') { e.preventDefault(); closeEditor(true); addChild(); }
+      });
+      inp.addEventListener('blur', () => closeEditor(true));
+    }));
+  }
+  function closeEditor(save) {
+    if (!editor) return;
+    const { inp, id } = editor; editor = null;
+    const text = inp.value.replace(/\s+/g, ' ').trim();
+    inp.remove();
+    const n = nodeById(id);
+    if (!save || !text || !n || n.text === text) { placeToolbar(); return; }
+    const newId = n.depth ? (P.parentId(id) ? P.parentId(id) + SEP : '') + text : '';
+    commit(P.updateNode(md, n, { text }), { select: newId });
+  }
+
+  // Floating toolbar for the selected node
+  const tb = $('toolbar');
+  function placeToolbar() {
+    if (sel == null || !latest() || editor) { tb.hidden = true; return; }
+    const n = lastNodes.find(x => x.id === sel);
+    const pn = nodeById(sel);
+    if (!n || !pn) { tb.hidden = true; return; }
+    const key = sel + '|' + pn.status + '|' + pn.priority + '|' + !!pn.image;
+    if (tb.dataset.for !== key) buildToolbar(pn, key);
+    tb.hidden = false;
+    const r = mapEl.getBoundingClientRect();
+    let left = view.x + n._x * view.k, top = view.y + (n._y - n._g.row / 2) * view.k - tb.offsetHeight - 12;
+    if (top < 8) top = view.y + (n._y - n._g.row / 2 + n._g.h) * view.k + 12;
+    left = Math.max(8, Math.min(left, r.width - tb.offsetWidth - 8));
+    tb.style.left = left + 'px'; tb.style.top = top + 'px';
+  }
+  function buildToolbar(n, key) {
+    tb.dataset.for = key;
+    const keys = { todo: '1', doing: '2', done: '3', paused: '4' };
+    const s = STATUS_ORDER.map(k => `<button data-a="st" data-v="${k}" aria-pressed="${n.status === k}" title="${L[k]}（按 ${keys[k]}）"><span class="dot" style="background:var(--${k})"></span>${L[k]}</button>`).join('');
+    const p = ['P0', 'P1', 'P2'].map(k => `<button data-a="pr" data-v="${k}" aria-pressed="${n.priority === k}">${k}</button>`).join('');
+    tb.innerHTML = s + '<span class="sep"></span>' + p + '<span class="sep"></span>' +
+      `<button data-a="child" title="Tab">＋子节点</button>` + (n.depth ? `<button data-a="sib" title="Enter">＋同级</button>` : '') +
+      `<button data-a="img">${n.image ? '换图片' : '＋图片'}</button>` + (n.image ? `<button data-a="noimg">移除图片</button>` : '') +
+      `<button data-a="ren" title="F2">改名</button>` + (n.depth ? `<span class="sep"></span><button data-a="del" class="danger" title="Delete">删除</button>` : '');
+  }
+  tb.addEventListener('pointerdown', e => e.stopPropagation());
+  tb.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const a = b.dataset.a, v = b.dataset.v;
+    if (a === 'st') setStatus(v);
+    else if (a === 'pr') setPriority(v);
+    else if (a === 'child') addChild();
+    else if (a === 'sib') addSibling();
+    else if (a === 'img') $('pick').click();
+    else if (a === 'noimg') edit(n => P.updateNode(md, n, { image: null }));
+    else if (a === 'ren') startRename();
+    else if (a === 'del') removeSel();
+  });
+
+  // Images: pick, drop or paste
+  $('pick').addEventListener('change', e => { const f = e.target.files[0]; e.target.value = ''; if (f) attachImage(f, sel); });
+  mapEl.addEventListener('dragover', e => {
+    if (![...e.dataTransfer.items].some(i => i.kind === 'file')) return;
+    e.preventDefault(); mapEl.classList.add('dropping');
+    document.querySelectorAll('.node.drop').forEach(x => x.classList.remove('drop'));
+    const g = document.elementFromPoint(e.clientX, e.clientY)?.closest('.node'); if (g) g.classList.add('drop');
+  });
+  mapEl.addEventListener('dragleave', e => { if (e.target === mapEl || !mapEl.contains(e.relatedTarget)) mapEl.classList.remove('dropping'); });
+  mapEl.addEventListener('drop', e => {
+    e.preventDefault(); mapEl.classList.remove('dropping');
+    const f = [...e.dataTransfer.files].find(f => f.type.startsWith('image/'));
+    const g = document.elementFromPoint(e.clientX, e.clientY)?.closest('.node');
+    document.querySelectorAll('.node.drop').forEach(x => x.classList.remove('drop'));
+    if (!f) return toast('只能拖入图片文件');
+    const id = g ? g.getAttribute('data-id') : sel;
+    if (id == null) return toast('把图片拖到一个节点上');
+    attachImage(f, id);
+  });
+  document.addEventListener('paste', e => {
+    if (e.target.closest('textarea,input') || sel == null) return;
+    const f = [...(e.clipboardData?.files || [])].find(f => f.type.startsWith('image/'));
+    if (f) { e.preventDefault(); attachImage(f, sel); }
+  });
+  async function attachImage(file, id) {
+    if (!latest()) return toast('回到最新版本才能编辑');
+    const ext = (file.type.split('/')[1] || 'png').replace('svg+xml', 'svg').replace('jpeg', 'jpg');
+    const named = file.name && !/^image\.\w+$/.test(file.name);
+    const stem = (named ? file.name.replace(/\.[^.]+$/, '') : 'image-' + Date.now().toString(36)).replace(/[^\w一-龥-]+/g, '-').slice(0, 40);
+    let path = 'assets/' + stem + '.' + ext;
+    if (LIVE) {
+      try {
+        const r = await fetch('/api/upload?name=' + encodeURIComponent(stem + '.' + ext), { method: 'POST', body: file });
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error || r.status);
+        path = j.src;
+      } catch (err) { return toast('图片没保存成功：' + err.message); }
+    } else {
+      ASSETS[path] = URL.createObjectURL(file);
+    }
+    sel = id;
+    if (edit(n => P.updateNode(md, n, { image: { alt: stem, src: path } }))) toast(LIVE ? '图片已保存到 ' + path : '已插入图片（演示模式下只在本页显示）');
+  }
+
+  // Keyboard
+  document.addEventListener('keydown', e => {
+    if (e.target.closest('input,textarea')) return;
+    const mod = e.metaKey || e.ctrlKey;
+    if (mod && e.key.toLowerCase() === 'z') { e.preventDefault(); e.shiftKey ? doRedo() : doUndo(); return; }
+    if (mod && e.key.toLowerCase() === 'y') { e.preventDefault(); doRedo(); return; }
+    if (mod) return;
+    if (sel != null && latest()) {
+      const n = nodeById(sel);
+      const keyStatus = { '1': 'todo', '2': 'doing', '3': 'done', '4': 'paused' }[e.key];
+      if (keyStatus) { e.preventDefault(); return setStatus(keyStatus); }
+      if (e.key === '0') { e.preventDefault(); return edit(n => P.updateNode(md, n, { status: null })); }
+      if (e.key === 'Tab') { e.preventDefault(); return addChild(); }
+      if (e.key === 'Enter') { e.preventDefault(); return addSibling(); }
+      if (e.key === 'F2' || e.key === ' ') { e.preventDefault(); return startRename(); }
+      if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); return removeSel(); }
+      if (e.key === 'Escape') return select(null);
+      if (n && e.key.startsWith('Arrow')) {
+        e.preventDefault();
+        const parent = n.depth ? nodeById(P.parentId(n.id)) : null;
+        const sibs = parent ? parent.children : [];
+        const i = sibs.findIndex(c => c.id === n.id);
+        if (e.key === 'ArrowLeft' && parent) select(parent.id);
+        if (e.key === 'ArrowRight' && n.children.length) { collapsed.delete(n.id); select(n.children[0].id); }
+        if (e.key === 'ArrowUp' && i > 0) select(sibs[i - 1].id);
+        if (e.key === 'ArrowDown' && i >= 0 && i < sibs.length - 1) select(sibs[i + 1].id);
+        return;
+      }
+    }
+    if (e.key === 'ArrowLeft') { stop(); go(cur - 1); }
+    if (e.key === 'ArrowRight') { stop(); go(cur + 1); }
+  });
+
+  // Markdown source pane
+  const src = $('source');
+  let srcTimer = null;
+  src.addEventListener('input', () => {
+    clearTimeout(srcTimer);
+    srcTimer = setTimeout(() => { if (latest()) commit(src.value, { fromSource: true }); }, 250);
+  });
+  function showTab(which) {
+    $('tab-ov').setAttribute('aria-selected', which === 'ov'); $('tab-src').setAttribute('aria-selected', which === 'src');
+    $('pane-ov').hidden = which !== 'ov'; $('pane-src').hidden = which !== 'src';
+  }
+  $('tab-ov').onclick = () => showTab('ov');
+  $('tab-src').onclick = () => showTab('src');
+
+  // ---------- live sync with the local file ----------
+  function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 300); }
+  async function save() {
+    saveTimer = null;
+    if (saving) return scheduleSave();
+    saving = true;
+    const content = md;
+    try {
+      const r = await fetch('/api/save', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ content, base: serverHash }) });
+      const j = await r.json();
+      if (r.status === 409) { applyServer(j); toast('文件在别处被修改了，已载入最新内容'); }
+      else if (!r.ok) throw new Error(j.error || r.status);
+      else { serverHash = j.hash; setMode('live', '已保存到 ' + DATA.file); }
+    } catch (err) { setMode('off', '保存失败，请确认 mindgit serve 还在运行'); }
+    saving = false;
+  }
+  function applyServer(state) {
+    serverHash = state.hash;
+    const wasLatest = latest();
+    base = state.commits.filter(c => !c.wip);
+    if (state.content !== md) { md = state.content; undo = []; redo = []; }
+    if (src !== document.activeElement) src.value = md;
+    rebuildCommits();
+    if (wasLatest || cur >= commits.length) cur = commits.length - 1;
+    render(false);
+  }
+  if (LIVE) {
+    const es = new EventSource('/api/events');
+    es.onmessage = ev => {
+      const state = JSON.parse(ev.data);
+      const sameHistory = state.commits.filter(c => !c.wip).map(c => c.sha).join() === base.map(c => c.sha).join();
+      if (state.hash === serverHash && sameHistory) return;
+      if ((saveTimer || saving) && state.content !== md) return; // our own save is on its way
+      applyServer(state);
+      setMode('live', '已连接本地文件');
+    };
+    es.onerror = () => setMode('off', '和本地文件的连接断开了');
+    es.onopen = () => setMode('live', '已连接本地文件');
+  } else {
+    $('src-note').textContent = '在这里改 Markdown，导图会同步更新。演示模式不会写回文件，用插件的 /mindgit:open 打开才会。';
+  }
 
   // ---------- side ledger ----------
   const fmt = iso => {
@@ -485,7 +897,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
     $('ver-msg').textContent = c.message;
     $('ver-meta').innerHTML = `<span class="sha">${esc(c.short)}</span><span>${esc(c.author || '')}</span><span>${fmt(c.date)}</span>`;
     const box = $('changes');
-    if (dd.initial) { box.innerHTML = '<p class="none">这是第一个版本。</p>'; }
+    if (dd.initial) box.innerHTML = '<p class="none">这是第一个版本。</p>';
     else {
       const rows = [];
       dd.addedTop.slice(0, 8).forEach(n => rows.push(`<li><span class="k" style="color:var(--done)">+</span><span>${esc(n.text)}</span></li>`));
@@ -494,27 +906,34 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
       box.innerHTML = `<div class="chg"><span class="a"><b>+${dd.added.length}</b> 新增</span><span class="s"><b>${dd.status.length}</b> 状态</span><span class="r"><b>−${dd.removed.length}</b> 删除</span></div>` +
         (rows.length ? `<ul class="chg-list">${rows.join('')}</ul>` : '<p class="none">导图结构没有变化。</p>');
     }
-    const s = P.stats(c.tree);
+    const s = P.stats(c._tree);
     const pct = s.total ? Math.round(s.counts.done / s.total * 100) : 0;
     $('pct').textContent = pct + '%';
     $('of').textContent = `${s.counts.done} / ${s.total} 项完成`;
-    $('bar').innerHTML = STATUS_ORDER.map(k => `<i style="width:${s.total ? s.counts[k] / s.total * 100 : 0}%;background:var(--${k})"></i>`).join('');
+    $('pbar').innerHTML = STATUS_ORDER.map(k => `<i style="width:${s.total ? s.counts[k] / s.total * 100 : 0}%;background:var(--${k})"></i>`).join('');
     $('legend').innerHTML = STATUS_ORDER.map(k => `<button class="chip" data-k="${k}" aria-pressed="${filter === k}"><span class="dot" style="background:var(--${k})"></span>${L[k]} ${s.counts[k]}</button>`).join('');
     $('legend').querySelectorAll('.chip').forEach(b => b.onclick = () => { filter = filter === b.dataset.k ? null : b.dataset.k; render(false); });
     $('mods').innerHTML = s.modules.length ? s.modules.map(m => `<div class="mod"><div class="mod-h"><span>${esc(m.node.text || '未分组')}</span><span>${m.done}/${m.total}</span></div>
-      <div class="bar">${STATUS_ORDER.map(k => `<i style="width:${m[k] / m.total * 100}%;background:var(--${k})"></i>`).join('')}</div></div>`).join('')
+      <div class="pbar">${STATUS_ORDER.map(k => `<i style="width:${m[k] / m.total * 100}%;background:var(--${k})"></i>`).join('')}</div></div>`).join('')
       : '<p class="none">给节点加上 [待开发] [进行中] [完成] 标签后，这里会显示每个模块的进度。</p>';
+    src.readOnly = !latest();
+    const want = latest() ? md : c.content;
+    if (src !== document.activeElement && src.value !== want) src.value = want;
   }
 
   // ---------- commit rail ----------
+  let railKey = '';
   function renderRail() {
     const ol = $('commits');
-    if (!ol.children.length) {
+    const key = commits.map(c => c.sha || 'wip').join();
+    if (key !== railKey) {
+      railKey = key;
+      ol.textContent = '';
       commits.forEach((c, i) => {
         const li = document.createElement('li');
         li.className = 'commit' + (c.wip ? ' wip' : '');
         li.innerHTML = `<button type="button"><span class="knot"></span><span class="msg">${esc(c.message)}</span><span class="meta"><span class="h">${esc(c.short)}</span> · ${fmt(c.date)}</span></button>`;
-        li.querySelector('button').onclick = () => go(i);
+        li.querySelector('button').onclick = () => { stop(); go(i); };
         ol.appendChild(li);
       });
     }
@@ -523,23 +942,23 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--change); ou
     if (on) { const tr = $('track'); tr.scrollLeft = Math.max(0, on.offsetLeft - tr.clientWidth / 2 + 84); }
     $('prev').disabled = cur === 0; $('next').disabled = cur === commits.length - 1;
   }
-  function go(i) { cur = Math.max(0, Math.min(commits.length - 1, i)); render(false); }
+  function go(i) { cur = Math.max(0, Math.min(commits.length - 1, i)); if (!latest()) closeEditor(false); render(false); }
+  $('to-latest').onclick = () => { stop(); go(commits.length - 1); };
   $('prev').onclick = () => { stop(); go(cur - 1); };
   $('next').onclick = () => { stop(); go(cur + 1); };
   function stop() { if (playing) { clearInterval(playing); playing = null; $('play').textContent = '▶'; $('play').setAttribute('aria-label', '回放全部版本'); } }
   $('play').onclick = () => {
     if (playing) return stop();
+    sel = null;
     if (cur === commits.length - 1) go(0);
     $('play').textContent = '❚❚'; $('play').setAttribute('aria-label', '暂停回放');
     playing = setInterval(() => { if (cur >= commits.length - 1) return stop(); go(cur + 1); }, 1600);
   };
-  document.addEventListener('keydown', e => {
-    if (e.target.closest('input,textarea')) return;
-    if (e.key === 'ArrowLeft') { stop(); go(cur - 1); }
-    if (e.key === 'ArrowRight') { stop(); go(cur + 1); }
-  });
 
-  const start = () => { render(true); };
+  let toastTimer = null;
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 2600); }
+
+  const start = () => { rebuildCommits(); cur = commits.length - 1; src.value = md; render('first'); };
   (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(start, start);
 })();
 </script>

@@ -1,0 +1,8 @@
+{
+  "name": "mindgit",
+  "version": "0.1.0",
+  "description": "用 Markdown 写产品思维导图，用 git 管版本，渲染成可回放历史、带进度统计的可视化页面",
+  "author": { "name": "Amanda" },
+  "license": "MIT",
+  "keywords": ["mindmap", "markdown", "git", "roadmap", "思维导图"]
+}
