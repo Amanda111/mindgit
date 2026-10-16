@@ -1,0 +1,8 @@
+{
+  "name": "mindgit",
+  "version": "0.1.0",
+  "description": "用 Markdown 写导图，用 git 管版本，渲染成可回放历史的可视化页面",
+  "bin": { "mindgit": "bin/mindgit.js" },
+  "files": ["bin", "src"],
+  "license": "MIT"
+}

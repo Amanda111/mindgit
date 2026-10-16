@@ -1,0 +1,545 @@
+<title>__TITLE__</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one-screen workbench. Map canvas on graph paper, a side ledger for version + progress, a commit rail along the bottom. */
+:root {
+  --bg: #eef1ee;
+  --paper: #f7f9f6;
+  --surface: #ffffff;
+  --ink: #18211d;
+  --muted: #5d6a64;
+  --faint: #8c9893;
+  --line: #d6ddd8;
+  --grid: #d3dad5;
+  --change: #2f5fe0;
+  --change-soft: rgba(47, 95, 224, .14);
+  --done: #1f8a52;
+  --doing: #c27408;
+  --todo: #7d8984;
+  --paused: #a24f4f;
+  --b0: #0f7f73; --b1: #4357c9; --b2: #b86e0b; --b3: #b23b62; --b4: #5f7f1d; --b5: #7c4dbb;
+  --root-bg: #18211d; --root-fg: #f7f9f6;
+  --font-sans: "IBM Plex Sans", "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101513; --paper: #141a17; --surface: #1a211e; --ink: #e3e9e5; --muted: #9aa8a1; --faint: #6d7b74;
+    --line: #2a3430; --grid: #232c28; --change: #7d9cff; --change-soft: rgba(125, 156, 255, .18);
+    --done: #4cc184; --doing: #f0a43a; --todo: #8d9a94; --paused: #d27f7f;
+    --b0: #3cc2b0; --b1: #8796ff; --b2: #eba64a; --b3: #f07aa0; --b4: #a6c95a; --b5: #b993f2;
+    --root-bg: #e3e9e5; --root-fg: #101513;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101513; --paper: #141a17; --surface: #1a211e; --ink: #e3e9e5; --muted: #9aa8a1; --faint: #6d7b74;
+  --line: #2a3430; --grid: #232c28; --change: #7d9cff; --change-soft: rgba(125, 156, 255, .18);
+  --done: #4cc184; --doing: #f0a43a; --todo: #8d9a94; --paused: #d27f7f;
+  --b0: #3cc2b0; --b1: #8796ff; --b2: #eba64a; --b3: #f07aa0; --b4: #a6c95a; --b5: #b993f2;
+  --root-bg: #e3e9e5; --root-fg: #101513;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-sans); font-size: 14px;
+  display: grid; grid-template-rows: auto 1fr auto; overflow: hidden;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--change); outline-offset: 2px; }
+
+/* Header */
+.top {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  border-bottom: 1px solid var(--line); background: var(--paper);
+}
+.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.brand b { font-weight: 700; letter-spacing: -.01em; font-size: 15px; }
+.brand code { font-family: var(--font-mono); font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.top .spacer { flex: 1; }
+.tools { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn {
+  border: 1px solid var(--line); background: var(--surface); border-radius: 6px; padding: 5px 10px; font-size: 13px;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:hover { border-color: var(--faint); }
+.btn[aria-pressed="true"] { border-color: var(--change); color: var(--change); background: var(--change-soft); }
+
+/* Main */
+.main { display: grid; grid-template-columns: 1fr 300px; min-height: 0; }
+.map {
+  position: relative; min-width: 0; min-height: 0; overflow: hidden; touch-action: none; cursor: grab;
+  background-color: var(--paper);
+  background-image: radial-gradient(var(--grid) 1px, transparent 1.2px);
+  background-size: 22px 22px;
+}
+.map.dragging { cursor: grabbing; }
+.map svg { width: 100%; height: 100%; display: block; }
+.zoom { position: absolute; right: 12px; bottom: 12px; display: flex; flex-direction: column; gap: 4px; }
+.zoom .btn { width: 32px; height: 32px; justify-content: center; padding: 0; font-family: var(--font-mono); }
+
+/* SVG map */
+.link { fill: none; stroke-width: 1.6; stroke-linecap: round; }
+.node text { fill: var(--ink); dominant-baseline: central; }
+.node .t0 { fill: var(--root-fg); font-weight: 600; font-size: 18px; }
+.node .t1 { font-weight: 600; font-size: 15px; }
+.node .t2 { font-weight: 500; font-size: 14px; }
+.node .t3 { font-size: 13px; }
+.node .pr { font-family: var(--font-mono); font-size: 10.5px; font-weight: 500; }
+.node .st { font-size: 11px; font-weight: 500; }
+.node.has-kids { cursor: pointer; }
+.node.dim { opacity: .22; }
+.node .halo { fill: var(--change-soft); stroke: var(--change); stroke-width: 1.4; stroke-dasharray: 4 3; }
+.node .newtag { fill: var(--change); }
+.node .newtag-t { fill: var(--surface); font-family: var(--font-mono); font-size: 9.5px; font-weight: 500; }
+.node .ring { fill: none; stroke: var(--change); stroke-width: 1.6; }
+.toggle { fill: var(--surface); stroke-width: 1.4; }
+.toggle-t { font-family: var(--font-mono); font-size: 9.5px; text-anchor: middle; }
+
+/* Side ledger */
+.side {
+  border-left: 1px solid var(--line); background: var(--surface); overflow-y: auto; min-height: 0;
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 22px;
+}
+.side h2 { font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); font-weight: 600; margin: 0 0 10px; }
+.ver-msg { font-size: 15px; font-weight: 600; line-height: 1.4; text-wrap: balance; margin: 0 0 6px; }
+.ver-meta { font-family: var(--font-mono); font-size: 12px; color: var(--muted); display: flex; gap: 10px; flex-wrap: wrap; }
+.sha { color: var(--change); }
+.chg { display: flex; gap: 12px; font-variant-numeric: tabular-nums; margin-bottom: 8px; font-family: var(--font-mono); font-size: 12.5px; }
+.chg span b { font-weight: 500; }
+.chg .a { color: var(--done); } .chg .r { color: var(--paused); } .chg .s { color: var(--change); }
+.chg-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+.chg-list li { display: grid; grid-template-columns: 16px 1fr; gap: 6px; line-height: 1.4; }
+.chg-list .k { font-family: var(--font-mono); text-align: center; }
+.chg-list .from { color: var(--faint); }
+.none { color: var(--faint); font-size: 13px; margin: 0; }
+
+.overall { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.overall .pct { font-size: 30px; font-weight: 600; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.overall .of { color: var(--muted); font-size: 13px; }
+.bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: var(--line); }
+.bar i { display: block; height: 100%; transition: width .4s ease; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip {
+  border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 3px 9px 3px 7px; font-size: 12px;
+  display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums;
+}
+.chip[aria-pressed="true"] { border-color: var(--ink); }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+.mods { display: flex; flex-direction: column; gap: 12px; }
+.mod-h { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; margin-bottom: 5px; }
+.mod-h span:last-child { font-family: var(--font-mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.mod .bar { height: 6px; }
+
+/* Commit rail */
+.rail {
+  border-top: 1px solid var(--line); background: var(--surface);
+  padding-block: 10px 12px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center;
+}
+.rail-ctl { display: flex; gap: 6px; }
+.rail-ctl .btn { width: 34px; height: 34px; justify-content: center; padding: 0; }
+.track { overflow-x: auto; min-width: 0; }
+.commits { display: flex; list-style: none; margin: 0; padding: 0 0 2px; position: relative; min-width: max-content; }
+.commits::before { content: ""; position: absolute; left: 10px; right: 10px; top: 9px; height: 2px; background: var(--line); }
+.commit { position: relative; flex: none; width: 168px; }
+.commit button {
+  border: 0; background: none; padding: 0 8px 0 0; text-align: left; width: 100%;
+  display: grid; grid-template-rows: 20px auto auto; gap: 3px;
+}
+.commit .knot {
+  width: 12px; height: 12px; border-radius: 50%; margin: 4px 0 0 4px;
+  background: var(--surface); border: 2px solid var(--faint); position: relative; z-index: 1;
+}
+.commit.past .knot { border-color: var(--ink); background: var(--ink); }
+.commit.on .knot { border-color: var(--change); background: var(--change); box-shadow: 0 0 0 4px var(--change-soft); }
+.commit.wip .knot { border-style: dashed; }
+.commit .msg { font-size: 12.5px; line-height: 1.35; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.commit .meta { font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+.commit.on .msg { font-weight: 600; }
+.commit.on .meta .h { color: var(--change); }
+
+@media (max-width: 760px) {
+  body { overflow: auto; height: auto; display: block; }
+  .main { display: block; }
+  .map { height: 62vh; }
+  .side { border-left: 0; border-top: 1px solid var(--line); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .rail { grid-template-columns: 1fr; }
+  .commit { width: 140px; }
+}
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+
+<header class="top">
+  <div class="brand"><b>Mindgit</b><code id="file"></code></div>
+  <div class="spacer"></div>
+  <div class="tools">
+    <button class="btn" id="btn-diff" aria-pressed="true" title="高亮这个版本相对上一版的变化">显示变更</button>
+    <button class="btn" id="btn-expand">全部展开</button>
+    <button class="btn" id="btn-fold">收起到模块</button>
+  </div>
+</header>
+
+<div class="main">
+  <div class="map" id="map">
+    <svg id="svg" aria-label="思维导图">
+      <g id="vp"><g id="links"></g><g id="nodes"></g></g>
+    </svg>
+    <div class="zoom">
+      <button class="btn" id="z-in" aria-label="放大">+</button>
+      <button class="btn" id="z-out" aria-label="缩小">−</button>
+      <button class="btn" id="z-fit" aria-label="适应窗口" title="适应窗口">⤢</button>
+    </div>
+  </div>
+  <aside class="side">
+    <section>
+      <h2>当前版本</h2>
+      <p class="ver-msg" id="ver-msg"></p>
+      <div class="ver-meta" id="ver-meta"></div>
+    </section>
+    <section>
+      <h2>相对上一版</h2>
+      <div id="changes"></div>
+    </section>
+    <section>
+      <h2>进度</h2>
+      <div class="overall"><span class="pct" id="pct"></span><span class="of" id="of"></span></div>
+      <div class="bar" id="bar"></div>
+      <div class="legend" id="legend"></div>
+    </section>
+    <section>
+      <h2>模块</h2>
+      <div class="mods" id="mods"></div>
+    </section>
+  </aside>
+</div>
+
+<footer class="rail">
+  <div class="rail-ctl">
+    <button class="btn" id="prev" aria-label="上一个版本">‹</button>
+    <button class="btn" id="play" aria-label="回放全部版本">▶</button>
+    <button class="btn" id="next" aria-label="下一个版本">›</button>
+  </div>
+  <div class="track" id="track"><ol class="commits" id="commits"></ol></div>
+</footer>
+
+<script>/*__PARSER__*/</script>
+<script id="mg-data" type="application/json">__DATA__</script>
+<script>
+(function () {
+  const P = window.MindgitParse;
+  const DATA = JSON.parse(document.getElementById('mg-data').textContent);
+  const commits = DATA.commits.map(c => ({ ...c, tree: P.parse(c.content) }));
+  const STATUS_ORDER = ['done', 'doing', 'todo', 'paused'];
+  const L = P.STATUS_LABEL;
+  const NS = 'http://www.w3.org/2000/svg';
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = id => document.getElementById(id);
+
+  let cur = commits.length - 1;
+  let showDiff = true;
+  let filter = null;
+  let collapsed = new Set();
+  let view = { x: 40, y: 0, k: 1 };
+  let pos = new Map();      // id -> {x, y} currently drawn
+  let playing = null;
+
+  $('file').textContent = DATA.file;
+
+  // ---------- measuring ----------
+  const ctx = document.createElement('canvas').getContext('2d');
+  const FONTS = [
+    '600 18px ' + getCss('--font-sans'), '600 15px ' + getCss('--font-sans'),
+    '500 14px ' + getCss('--font-sans'), '400 13px ' + getCss('--font-sans'),
+  ];
+  function getCss(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+  function tw(text, depth) { ctx.font = FONTS[Math.min(depth, 3)]; return ctx.measureText(text || ' ').width; }
+  function color(v) { return getCss(v); }
+
+  // ---------- layout ----------
+  const ROW = [44, 34, 28, 24];
+  const PAD = [18, 12, 0, 0];
+  function geom(n) {
+    const d = Math.min(n.depth, 3);
+    const w0 = tw(n.text, d);
+    let w = w0 + PAD[d] * 2;
+    const pr = n.priority ? 26 : 0;
+    const st = n.status ? 18 + tw(L[n.status], 3) * 11 / 13 + 10 : 0;
+    w += (pr || st) ? 8 + pr + (pr && st ? 4 : 0) + st : 0;
+    return { tw: w0, w, h: ROW[d], pr, st };
+  }
+  function layout(tree) {
+    const out = [];
+    const GAPX = 44;
+    function size(n) {
+      n._g = geom(n);
+      n._kids = collapsed.has(n.id) ? [] : n.children;
+      const gap = n.depth === 0 ? 18 : n.depth === 1 ? 8 : 4;
+      let s = 0;
+      n._kids.forEach((k, i) => { s += size(k) + (i ? gap : 0); });
+      n._gap = gap;
+      n._sh = Math.max(n._g.h, s);
+      return n._sh;
+    }
+    function place(n, x, top, branch) {
+      n._x = x; n._y = top + n._sh / 2; n._b = branch;
+      out.push(n);
+      let total = 0; n._kids.forEach((k, i) => total += k._sh + (i ? n._gap : 0));
+      let cy = top + (n._sh - total) / 2;
+      n._kids.forEach((k, i) => {
+        place(k, x + n._g.w + GAPX, cy, n.depth === 0 ? i % 6 : branch);
+        cy += k._sh + n._gap;
+      });
+    }
+    size(tree);
+    place(tree, 0, -tree._sh / 2, 0);
+    return out;
+  }
+
+  // ---------- drawing ----------
+  function el(tag, attrs, parent) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  const anchorY = n => n.depth >= 2 ? n._g.h / 2 - 1 : 0;
+
+  function drawNode(n, d) {
+    const g = el('g', { class: 'node' + (n.children.length ? ' has-kids' : '') });
+    const b = 'var(--b' + n._b + ')';
+    const h = n._g.h, w = n._g.w, depth = Math.min(n.depth, 3);
+    const added = showDiff && d.added.has(n.id);
+    if (added) el('rect', { class: 'halo', x: -4, y: -h / 2, width: w + 8, height: h, rx: 6 }, g);
+    if (depth === 0) el('rect', { x: 0, y: -h / 2, width: w, height: h, rx: h / 2, fill: 'var(--root-bg)' }, g);
+    else if (depth === 1) el('rect', { x: 0, y: -h / 2, width: w, height: h, rx: 7, fill: 'var(--surface)', stroke: b, 'stroke-width': 1.5 }, g);
+    else el('line', { x1: 0, x2: w, y1: h / 2 - 1, y2: h / 2 - 1, stroke: b, 'stroke-width': depth === 2 ? 2 : 1.4, 'stroke-linecap': 'round' }, g);
+    const t = el('text', { class: 't' + depth, x: PAD[depth], y: depth >= 2 ? -1 : 0 }, g);
+    t.textContent = n.text;
+    let x = PAD[depth] + n._g.tw + 8;
+    if (n.priority) {
+      const pg = el('g', { transform: `translate(${x},0)` }, g);
+      el('rect', { x: 0, y: -8, width: 24, height: 16, rx: 3, fill: 'none', stroke: n.priority === 'P0' ? 'var(--ink)' : 'var(--faint)' }, pg);
+      const pt = el('text', { class: 'pr', x: 12, y: 0, 'text-anchor': 'middle' }, pg);
+      pt.textContent = n.priority;
+      x += 28;
+    }
+    if (n.status) {
+      const sc = 'var(--' + n.status + ')';
+      const sg = el('g', { transform: `translate(${x},0)` }, g);
+      const sw = n._g.st - 4;
+      el('rect', { x: 0, y: -9, width: sw, height: 18, rx: 9, fill: sc, 'fill-opacity': .13 }, sg);
+      if (n.status === 'done') el('path', { d: 'M5.5 0.2 l2.4 2.4 l4.4 -4.8', fill: 'none', stroke: sc, 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, sg);
+      else if (n.status === 'doing') { el('circle', { cx: 9, cy: 0, r: 4, fill: 'none', stroke: sc, 'stroke-width': 1.6 }, sg); el('path', { d: 'M9 -4 A4 4 0 0 1 9 4 Z', fill: sc }, sg); }
+      else el('circle', { cx: 9, cy: 0, r: 3.5, fill: n.status === 'paused' ? sc : 'none', stroke: sc, 'stroke-width': 1.5 }, sg);
+      const st = el('text', { class: 'st', x: 17, y: 0, fill: sc }, sg);
+      st.style.fill = sc;
+      st.textContent = L[n.status];
+      const ch = showDiff && d.status.get(n.id);
+      if (ch) {
+        el('rect', { class: 'ring', x: -2, y: -10.5, width: sw + 4, height: 21, rx: 10.5 }, sg);
+        const tt = el('title', {}, sg); tt.textContent = (ch.from ? L[ch.from] : '无状态') + ' → ' + (ch.to ? L[ch.to] : '无状态');
+      }
+    }
+    if (added) {
+      const ng = el('g', { transform: `translate(${w + (n.children.length ? 22 : 10)},${anchorY(n) ? -1 : 0})` }, g);
+      el('rect', { class: 'newtag', x: 0, y: -7, width: 28, height: 14, rx: 7 }, ng);
+      const nt = el('text', { class: 'newtag-t', x: 14, y: 0, 'text-anchor': 'middle' }, ng); nt.textContent = 'NEW';
+    }
+    if (n.children.length) {
+      const cg = el('g', { transform: `translate(${w + 7},${anchorY(n)})` }, g);
+      const isC = collapsed.has(n.id);
+      el('circle', { class: 'toggle', r: isC ? 8 : 4, stroke: depth === 0 ? 'var(--ink)' : b }, cg);
+      if (isC) { const ct = el('text', { class: 'toggle-t', y: 0, 'dominant-baseline': 'central' }, cg); ct.textContent = countAll(n); ct.style.fill = depth === 0 ? 'var(--ink)' : b; }
+      g.addEventListener('click', e => { e.stopPropagation(); if (moved) return; toggle(n.id); });
+    }
+    if (filter && !matches(n)) g.classList.add('dim');
+    const title = el('title', {}, g); title.textContent = n.text;
+    return g;
+  }
+  function countAll(n) { let c = 0; (function w(x) { x.children.forEach(k => { c++; w(k); }); })(n); return c; }
+  function matches(n) { if (n.status === filter) return true; return n.children.some(matches); }
+
+  let anim = null;
+  function render(fit) {
+    const c = commits[cur];
+    const prev = commits[cur - 1];
+    const dd = P.diff(prev && prev.tree, c.tree);
+    const d = { added: new Set(dd.initial ? [] : dd.added.map(n => n.id)), status: new Map(dd.status.map(s => [s.node.id, s])) };
+    const nodes = layout(c.tree);
+    const byId = new Map(nodes.map(n => [n.id, n]));
+    const nodesG = $('nodes'), linksG = $('links');
+    nodesG.textContent = ''; linksG.textContent = '';
+    const items = nodes.map(n => {
+      const g = drawNode(n, d); nodesG.appendChild(g);
+      const parentId = n.id.includes('\u001f') ? n.id.slice(0, n.id.lastIndexOf('\u001f')) : (n.id ? '' : null);
+      const p = parentId === null ? null : byId.get(parentId);
+      const link = p ? el('path', { class: 'link', stroke: 'var(--b' + n._b + ')' }, linksG) : null;
+      const from = pos.get(n.id) || (p && pos.get(p.id)) || { x: n._x, y: n._y };
+      return { n, g, p, link, from, to: { x: n._x, y: n._y }, fresh: !pos.has(n.id) };
+    });
+    const map = new Map(items.map(i => [i.n.id, i]));
+    if (anim) cancelAnimationFrame(anim);
+    const T = reduced ? 0 : 420, t0 = performance.now();
+    function frame(now) {
+      const t = T ? Math.min(1, (now - t0) / T) : 1;
+      const e = 1 - Math.pow(1 - t, 3);
+      items.forEach(i => {
+        i.x = i.from.x + (i.to.x - i.from.x) * e; i.y = i.from.y + (i.to.y - i.from.y) * e;
+        i.g.setAttribute('transform', `translate(${i.x},${i.y})`);
+        if (i.fresh) i.g.style.opacity = e;
+      });
+      items.forEach(i => {
+        if (!i.link) return;
+        const p = map.get(i.p.id);
+        const x1 = p.x + p.n._g.w + (p.n.children.length ? 11 : 0), y1 = p.y + anchorY(p.n);
+        const x2 = i.x, y2 = i.y + anchorY(i.n);
+        const mx = (x1 + x2) / 2;
+        i.link.setAttribute('d', `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`);
+        i.link.style.opacity = i.fresh ? e : 1;
+        if (filter && !matches(i.n)) i.link.style.opacity = .18;
+      });
+      if (t < 1) anim = requestAnimationFrame(frame);
+      else { anim = null; pos = new Map(items.map(i => [i.n.id, i.to])); }
+    }
+    anim = requestAnimationFrame(frame);
+    if (fit) fitView(nodes);
+    renderSide(c, dd);
+    renderRail();
+  }
+
+  // ---------- view ----------
+  function applyView() { $('vp').setAttribute('transform', `translate(${view.x},${view.y}) scale(${view.k})`); }
+  function fitView(nodes) {
+    nodes = nodes || layout(commits[cur].tree);
+    let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+    nodes.forEach(n => { x0 = Math.min(x0, n._x - 30); x1 = Math.max(x1, n._x + n._g.w + 50); y0 = Math.min(y0, n._y - n._g.h); y1 = Math.max(y1, n._y + n._g.h); });
+    const r = $('map').getBoundingClientRect();
+    const k = Math.min(1.15, Math.max(.3, Math.min((r.width - 60) / (x1 - x0), (r.height - 70) / (y1 - y0))));
+    view = { k, x: (r.width - (x1 - x0) * k) / 2 - x0 * k, y: (r.height - (y1 - y0) * k) / 2 - y0 * k };
+    applyView();
+  }
+  function zoomAt(f, cx, cy) {
+    const k = Math.max(.25, Math.min(3, view.k * f));
+    view.x = cx - (cx - view.x) * (k / view.k); view.y = cy - (cy - view.y) * (k / view.k); view.k = k;
+    applyView();
+  }
+  const mapEl = $('map');
+  mapEl.addEventListener('wheel', e => {
+    e.preventDefault();
+    const r = mapEl.getBoundingClientRect();
+    zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? .01 : .0015)), e.clientX - r.left, e.clientY - r.top);
+  }, { passive: false });
+  const pointers = new Map();
+  let moved = false, last = null, pinch = null;
+  mapEl.addEventListener('pointerdown', e => {
+    if (e.target.closest('.zoom')) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    moved = false; last = { x: e.clientX, y: e.clientY };
+    if (pointers.size === 2) { const [a, b] = [...pointers.values()]; pinch = Math.hypot(a.x - b.x, a.y - b.y); }
+  });
+  window.addEventListener('pointermove', e => {
+    if (!pointers.has(e.pointerId)) return;
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size === 2 && pinch) {
+      const [a, b] = [...pointers.values()]; const dist = Math.hypot(a.x - b.x, a.y - b.y);
+      const r = mapEl.getBoundingClientRect();
+      zoomAt(dist / pinch, (a.x + b.x) / 2 - r.left, (a.y + b.y) / 2 - r.top); pinch = dist; moved = true; return;
+    }
+    const dx = e.clientX - last.x, dy = e.clientY - last.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3 || moved) {
+      if (!moved) mapEl.setPointerCapture?.(e.pointerId);
+      moved = true; mapEl.classList.add('dragging');
+      view.x += dx; view.y += dy; last = { x: e.clientX, y: e.clientY }; applyView();
+    }
+  });
+  const up = e => { pointers.delete(e.pointerId); if (pointers.size < 2) pinch = null; mapEl.classList.remove('dragging'); setTimeout(() => { if (!pointers.size) moved = false; }, 0); };
+  window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+  const center = () => { const r = mapEl.getBoundingClientRect(); return [r.width / 2, r.height / 2]; };
+  $('z-in').onclick = () => zoomAt(1.25, ...center());
+  $('z-out').onclick = () => zoomAt(.8, ...center());
+  $('z-fit').onclick = () => fitView();
+  window.addEventListener('resize', () => fitView());
+
+  function toggle(id) { collapsed.has(id) ? collapsed.delete(id) : collapsed.add(id); render(false); }
+  $('btn-expand').onclick = () => { collapsed.clear(); render(true); };
+  $('btn-fold').onclick = () => {
+    collapsed.clear();
+    (function w(n) { if (n.depth >= 2 && n.children.length) collapsed.add(n.id); n.children.forEach(w); })(commits[cur].tree);
+    render(true);
+  };
+  $('btn-diff').onclick = e => { showDiff = !showDiff; e.currentTarget.setAttribute('aria-pressed', showDiff); render(false); };
+
+  // ---------- side ledger ----------
+  const fmt = iso => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return `${d.getMonth() + 1}月${d.getDate()}日 ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  };
+  function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+  function renderSide(c, dd) {
+    $('ver-msg').textContent = c.message;
+    $('ver-meta').innerHTML = `<span class="sha">${esc(c.short)}</span><span>${esc(c.author || '')}</span><span>${fmt(c.date)}</span>`;
+    const box = $('changes');
+    if (dd.initial) { box.innerHTML = '<p class="none">这是第一个版本。</p>'; }
+    else {
+      const rows = [];
+      dd.addedTop.slice(0, 8).forEach(n => rows.push(`<li><span class="k" style="color:var(--done)">+</span><span>${esc(n.text)}</span></li>`));
+      dd.status.slice(0, 8).forEach(s => rows.push(`<li><span class="k" style="color:var(--change)">~</span><span>${esc(s.node.text)} <span class="from">${s.from ? L[s.from] : '无'} →</span> <span style="color:var(--${s.to || 'todo'})">${s.to ? L[s.to] : '无'}</span></span></li>`));
+      dd.removedTop.slice(0, 8).forEach(n => rows.push(`<li><span class="k" style="color:var(--paused)">−</span><span style="text-decoration:line-through;color:var(--muted)">${esc(n.text)}</span></li>`));
+      box.innerHTML = `<div class="chg"><span class="a"><b>+${dd.added.length}</b> 新增</span><span class="s"><b>${dd.status.length}</b> 状态</span><span class="r"><b>−${dd.removed.length}</b> 删除</span></div>` +
+        (rows.length ? `<ul class="chg-list">${rows.join('')}</ul>` : '<p class="none">导图结构没有变化。</p>');
+    }
+    const s = P.stats(c.tree);
+    const pct = s.total ? Math.round(s.counts.done / s.total * 100) : 0;
+    $('pct').textContent = pct + '%';
+    $('of').textContent = `${s.counts.done} / ${s.total} 项完成`;
+    $('bar').innerHTML = STATUS_ORDER.map(k => `<i style="width:${s.total ? s.counts[k] / s.total * 100 : 0}%;background:var(--${k})"></i>`).join('');
+    $('legend').innerHTML = STATUS_ORDER.map(k => `<button class="chip" data-k="${k}" aria-pressed="${filter === k}"><span class="dot" style="background:var(--${k})"></span>${L[k]} ${s.counts[k]}</button>`).join('');
+    $('legend').querySelectorAll('.chip').forEach(b => b.onclick = () => { filter = filter === b.dataset.k ? null : b.dataset.k; render(false); });
+    $('mods').innerHTML = s.modules.length ? s.modules.map(m => `<div class="mod"><div class="mod-h"><span>${esc(m.node.text || '未分组')}</span><span>${m.done}/${m.total}</span></div>
+      <div class="bar">${STATUS_ORDER.map(k => `<i style="width:${m[k] / m.total * 100}%;background:var(--${k})"></i>`).join('')}</div></div>`).join('')
+      : '<p class="none">给节点加上 [待开发] [进行中] [完成] 标签后，这里会显示每个模块的进度。</p>';
+  }
+
+  // ---------- commit rail ----------
+  function renderRail() {
+    const ol = $('commits');
+    if (!ol.children.length) {
+      commits.forEach((c, i) => {
+        const li = document.createElement('li');
+        li.className = 'commit' + (c.wip ? ' wip' : '');
+        li.innerHTML = `<button type="button"><span class="knot"></span><span class="msg">${esc(c.message)}</span><span class="meta"><span class="h">${esc(c.short)}</span> · ${fmt(c.date)}</span></button>`;
+        li.querySelector('button').onclick = () => go(i);
+        ol.appendChild(li);
+      });
+    }
+    [...ol.children].forEach((li, i) => { li.classList.toggle('on', i === cur); li.classList.toggle('past', i < cur); });
+    const on = ol.children[cur];
+    if (on) { const tr = $('track'); tr.scrollLeft = Math.max(0, on.offsetLeft - tr.clientWidth / 2 + 84); }
+    $('prev').disabled = cur === 0; $('next').disabled = cur === commits.length - 1;
+  }
+  function go(i) { cur = Math.max(0, Math.min(commits.length - 1, i)); render(false); }
+  $('prev').onclick = () => { stop(); go(cur - 1); };
+  $('next').onclick = () => { stop(); go(cur + 1); };
+  function stop() { if (playing) { clearInterval(playing); playing = null; $('play').textContent = '▶'; $('play').setAttribute('aria-label', '回放全部版本'); } }
+  $('play').onclick = () => {
+    if (playing) return stop();
+    if (cur === commits.length - 1) go(0);
+    $('play').textContent = '❚❚'; $('play').setAttribute('aria-label', '暂停回放');
+    playing = setInterval(() => { if (cur >= commits.length - 1) return stop(); go(cur + 1); }, 1600);
+  };
+  document.addEventListener('keydown', e => {
+    if (e.target.closest('input,textarea')) return;
+    if (e.key === 'ArrowLeft') { stop(); go(cur - 1); }
+    if (e.key === 'ArrowRight') { stop(); go(cur + 1); }
+  });
+
+  const start = () => { render(true); };
+  (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve()).then(start, start);
+})();
+</script>
