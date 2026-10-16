@@ -13,9 +13,17 @@ Claude Code 插件：用 Markdown 写产品思维导图，用 git 管版本，�
 在 Claude Code 里：
 
 ```
-/plugin marketplace add <这个仓库的地址或本地路径>
+/plugin install mindgit --marketplace Amanda111/mindgit
+```
+
+旧版本的 Claude Code 分两步：
+
+```
+/plugin marketplace add Amanda111/mindgit
 /plugin install mindgit@mindgit
 ```
+
+更新到最新版：`/plugin update mindgit`。
 
 需要 Node.js 18 以上，没有其他依赖。
 
